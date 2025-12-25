@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlignCenter, PanelLeft } from "lucide-react";
+import { AlignCenter, PanelLeft, CircleX } from "lucide-react";
 import Lottie from "lottie-react";
 import water from "./assets/water.json";
+
 import {
   CloudUpload,
   FileUp,
@@ -28,6 +29,8 @@ export default function Home() {
   const [sessionId, setSessionId] = useState(null);
   const [riskLevel, setRiskLevel] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [report, setReport] = useState(null);
+  const [showReport, setShowReport] = useState(false);
 
   //   button handlers
   const handleCancel = (e) => {
@@ -73,25 +76,22 @@ export default function Home() {
 
     const formData = new FormData();
     formData.append("file", file);
-
     try {
       const res = await fetch("http://localhost:5000/upload", {
         method: "POST",
         body: formData,
       });
-
       const data = await res.json();
       console.log(data);
-     
+      console.log("Status code:", res.status);
 
-      // backend بيرجع sessionId بس
       setSessionId(data.sessionId);
       setRiskLevel(data.report.risk_level);
       setSummary(data.summarization);
+      setReport(data.report);
 
       setisSafe(data.report.risk_level === 1 || data.report.risk_level === 2);
       setscanned(true);
-
       setDragtext("Scan completed");
     } catch (err) {
       console.error(err);
@@ -99,9 +99,13 @@ export default function Home() {
       setLoading(false);
     }
   }
-
+  function handlenavigate(e) {
+    e.preventDefault();
+    navigate("/Chat", { state: { summary, sessionId } });
+  }
   function handleclick(e) {
     e.preventDefault();
+    console.log("🖱 clicking input");
     inputRef.current.click();
   }
 
@@ -112,10 +116,11 @@ export default function Home() {
 
   // drop
   async function handledrop(e) {
-  e.preventDefault();
-  const droppedFiles = e.dataTransfer.files;
-  if (droppedFiles.length > 0) {
-    const file = droppedFiles[0]; // ناخد أول ملف
+    e.preventDefault();
+    const droppedFiles = e.dataTransfer.files;
+    if (!droppedFiles.length) return;
+
+    const file = droppedFiles[0];
     setFiles([file]);
     setDragtext("Uploading file...");
     setShowbtns(false);
@@ -123,17 +128,17 @@ export default function Home() {
 
     const formData = new FormData();
     formData.append("file", file);
-
     try {
       const res = await fetch("http://localhost:5000/upload", {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-
+const data = await res.json();
       setSessionId(data.sessionId);
       setRiskLevel(data.report.risk_level);
       setSummary(data.summarization);
+      setReport(data.report);
+
       setisSafe(data.report.risk_level === 1 || data.report.risk_level === 2);
       setscanned(true);
       setDragtext("Scan completed");
@@ -143,8 +148,6 @@ export default function Home() {
       setLoading(false);
     }
   }
-}
-
 
   function handledragleave(e) {
     e.preventDefault();
@@ -301,9 +304,7 @@ export default function Home() {
                   </button>
                   <button
                     className={`summarize-btn ${!isSafe ? "disabled-btn" : ""}`}
-                    onClick={() =>
-                      navigate("/Chat", { state: { summary, sessionId } })
-                    }
+                    onClick={handlenavigate}
                     disabled={!isSafe}
                   >
                     Summarize & Discuss
@@ -314,13 +315,88 @@ export default function Home() {
           </div>
         </div>
 
+        {scanned && riskLevel && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "Column",
+              gap: "4px",
+              fontWeight: "600",
+              fontSize: "18px",
+              marginTop: "8px",
+            }}
+          >
+            {riskLevel === 3 ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "2px",
+                  fontWeight: "600",
+                  fontSize: "18px",
+                }}
+              >
+                <div>Risk Level:</div>
+                <div style={{ color: "red" }}>High</div>
+              </div>
+            ) : (
+              "Comprehensive Threat Analysis"
+            )}
+            {report && (
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowReport(!showReport);
+                }}
+                style={{
+                  color: "#4F204E",
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                  fontSize: "18px",
+                  fontWeight: "600",
+                }}
+              >
+                {showReport ? "Hide report" : "View full report"}
+              </a>
+            )}
+          </div>
+        )}
+
+        {showReport && report && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              {/* Header */}
+              <div
+                style={{ backgroundColor: "#EAEAEA" }}
+                className="modal-header"
+              >
+                <h3 style={{ color: "#4F204E" }}>Technical Analysis Report</h3>
+                <button
+                  className="close-btn"
+                  onClick={() => setShowReport(false)}
+                >
+                  <CircleX />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="modal-body">
+                <pre>{JSON.stringify(report, null, 2)}</pre>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* input */}
         <input
           type="file"
           ref={inputRef}
           hidden
-          multiple
-          onChange={handleChange}
+          onChange={(e) => {
+            console.log("📁 file selected", e.target.files);
+            handleChange(e);
+          }}
         />
       </div>
     </div>

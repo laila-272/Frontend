@@ -4,6 +4,7 @@ import { PanelLeft, ArrowUp, Plus } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { ClipLoader } from "react-spinners";
 
+
 export default function Chat() {
   const messagesEndRef = useRef(null);
   const [messages, setMessages] = useState([]);
@@ -15,11 +16,10 @@ export default function Chat() {
 
   const { summary, sessionId } = location.state || {};
   useEffect(() => {
-  setLoadingSummary(true);
-  const timer = setTimeout(() => setLoadingSummary(false), 4000); // fake 5s delay
-  return () => clearTimeout(timer);
-}, []);
-
+    setLoadingSummary(true);
+    const timer = setTimeout(() => setLoadingSummary(false), 4000); // fake 5s delay
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -63,7 +63,6 @@ export default function Chat() {
 
   return (
     <div className="chat">
-      
       <div className="title d-flex align-items-center gap-2">
         <div className="icon">
           <PanelLeft />
@@ -83,7 +82,7 @@ export default function Chat() {
               fontWeight: "500",
             }}
           >
-             <ClipLoader color="#4F204E" size={50} />
+            <ClipLoader color="#4F204E" size={50} />
           </div>
         ) : (
           <div className="chat-container">
@@ -98,15 +97,23 @@ export default function Chat() {
                 {messages.map((msg, index) => (
                   <div key={index} className={`message ${msg.role}`}>
                     {msg.content}
-                    {msg.role === "assistant" && msg.sources && (
-                      <ul className="sources">
-                        {msg.sources.map((s, i) => (
-                          <li key={i}>
-                            {s.source} - page {s.page}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    {msg.role === "assistant" &&
+                      msg.sources &&
+                      msg.sources.length > 0 && (
+                        <ul className="sources">
+                          {[
+                            ...new Map(
+                              msg.sources
+                                .filter((s) => s.source && s.page) 
+                                .map((s) => [s.source + "-" + s.page, s])
+                            ).values(),
+                          ].map((s, i) => (
+                            <li key={i}>
+                              {s.source} - page {s.page}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                   </div>
                 ))}
 
